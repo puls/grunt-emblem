@@ -26,7 +26,7 @@ module.exports = function(grunt) {
     });
 
     // Make window for compilation
-    var window = jsdom.jsdom().createWindow();
+    var window = jsdom.jsdom().parentWindow;
 
     // load each dependency into the window
     var dependencies = options.dependencies;
