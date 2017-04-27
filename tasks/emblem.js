@@ -6,56 +6,59 @@
  * Licensed under the MIT license.
  */
 
-'use strict';
+"use strict";
 
 module.exports = function(grunt) {
+  var jsdom = require("jsdom");
 
-  var jsdom = require('jsdom');
-
-  var EmberBuilder, TemplateBuilder, VanillaBuilder, description, fileExists, writeOutput, _;
+  var EmberBuilder,
+    TemplateBuilder,
+    VanillaBuilder,
+    description,
+    fileExists,
+    writeOutput,
+    _;
 
   _ = grunt.util._;
 
-  description = 'Compile emblem templates into Handlebars.';
+  description = "Compile emblem templates into Handlebars.";
 
-  grunt.registerMultiTask('emblem', description, function() {
-
+  grunt.registerMultiTask("emblem", description, function() {
     // Merge task-specific and/or target-specific options with these defaults.
     var options = this.options({
       separator: grunt.util.linefeed + grunt.util.linefeed
     });
 
     // Make window for compilation
-    var window = jsdom.jsdom().parentWindow;
+    var dom = new jsdom.JSDOM("<body></body>", { runScripts: "outside-only" });
+    var window = dom.window;
 
     // load each dependency into the window
     var dependencies = options.dependencies;
 
     if (dependencies.jquery) {
-      window.run(grunt.file.read(dependencies.jquery, 'utf8'));
+      window.eval(grunt.file.read(dependencies.jquery, "utf8"));
     }
 
-    window.run(grunt.file.read(dependencies.handlebars, 'utf8'));
+    window.eval(grunt.file.read(dependencies.handlebars, "utf8"));
 
-    window.run(grunt.file.read(dependencies.emblem, 'utf8'));
+    window.eval(grunt.file.read(dependencies.emblem, "utf8"));
 
     var templateBuilder;
 
     if (dependencies.ember) {
-      window.run(grunt.file.read(dependencies.ember, 'utf8'));
+      window.eval(grunt.file.read(dependencies.ember, "utf8"));
 
       templateBuilder = new EmberBuilder(window, {
         rootPath: options.root
       });
-
     } else {
-
       templateBuilder = new VanillaBuilder(window, {
         rootPath: options.root
       });
     }
 
-    grunt.verbose.writeflags(options, 'Options');
+    grunt.verbose.writeflags(options, "Options");
 
     this.files.forEach(function(f) {
       var templates;
@@ -72,7 +75,9 @@ module.exports = function(grunt) {
       });
 
       if (templates.length < 1) {
-        grunt.log.warn("Destination not written because compiled files were empty.");
+        grunt.log.warn(
+          "Destination not written because compiled files were empty."
+        );
       } else {
         writeOutput(templates, f, options.separator);
       }
@@ -84,7 +89,7 @@ module.exports = function(grunt) {
   //------------------------------
   var writeOutput = function(output, file, separator) {
     grunt.file.write(file.dest, output.join(grunt.util.normalizelf(separator)));
-    grunt.log.writeln("File \"" + file.dest + "\" created.");
+    grunt.log.writeln('File "' + file.dest + '" created.');
   };
 
   //----------------------------------
@@ -92,24 +97,33 @@ module.exports = function(grunt) {
   //----------------------------------
   var fileExists = function(filepath) {
     if (!grunt.file.exists(filepath)) {
-      grunt.log.warn("Source file \"" + filepath + "\" not found.");
+      grunt.log.warn('Source file "' + filepath + '" not found.');
       return false;
     } else {
       return true;
     }
   };
 
-
   // SETUP CLASS STYLE INHERITANCE
   var __hasProp = {}.hasOwnProperty,
-      __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+    __extends = function(child, parent) {
+      for (var key in parent) {
+        if (__hasProp.call(parent, key)) child[key] = parent[key];
+      }
+      function ctor() {
+        this.constructor = child;
+      }
+      ctor.prototype = parent.prototype;
+      child.prototype = new ctor();
+      child.__super__ = parent.prototype;
+      return child;
+    };
 
   //----------------------------------
   // TemplateBuilder
   // Abstract class for building templates
   //----------------------------------
   var TemplateBuilder = (function() {
-
     function TemplateBuilder(window, options) {
       if (options == null) {
         options = {};
@@ -119,11 +133,13 @@ module.exports = function(grunt) {
     }
 
     TemplateBuilder.prototype.keyForFilePath = function(filepath) {
-      return filepath.replace(new RegExp('\\\\', 'g'), '/').replace(/\.\w+$/, '').replace(this.rootPath, '');
+      return filepath
+        .replace(new RegExp("\\\\", "g"), "/")
+        .replace(/\.\w+$/, "")
+        .replace(this.rootPath, "");
     };
 
     return TemplateBuilder;
-
   })();
 
   //----------------------------------
@@ -131,7 +147,6 @@ module.exports = function(grunt) {
   // Builder for ember templates
   //----------------------------------
   var EmberBuilder = (function(_super) {
-
     __extends(EmberBuilder, _super);
 
     function EmberBuilder() {
@@ -141,21 +156,25 @@ module.exports = function(grunt) {
     EmberBuilder.prototype.build = function(src, filepath) {
       var compiled, key, template;
       key = JSON.stringify(this.keyForFilePath(filepath));
-      compiled = this.window.Emblem.precompile(this.window.Ember.Handlebars, src);
+      compiled = this.window.Emblem.precompile(
+        this.window.Ember.Handlebars,
+        src
+      );
       template = "Ember.Handlebars.template(" + compiled + ")";
-      return "Ember.TEMPLATES[" + key.replace(/^"\//, '"') + "] = " + template + ";";
+      return (
+        "Ember.TEMPLATES[" + key.replace(/^"\//, '"') + "] = " + template + ";"
+      );
     };
 
     return EmberBuilder;
 
-  //----------------------------------
-  // VanillaBuilder
-  // Builder for vanilla handlebars templates
-  //----------------------------------
+    //----------------------------------
+    // VanillaBuilder
+    // Builder for vanilla handlebars templates
+    //----------------------------------
   })(TemplateBuilder);
 
   var VanillaBuilder = (function(_super) {
-
     __extends(VanillaBuilder, _super);
 
     function VanillaBuilder() {
@@ -166,11 +185,15 @@ module.exports = function(grunt) {
       var content, key;
       key = this.keyForFilePath(filepath);
       content = this.window.Emblem.precompile(this.window.Handlebars, src);
-      return "var templates = Handlebars.templates = Handlebars.templates || {};\ntemplates['" + key + "'] = Handlebars.template(" + content + ");";
+      return (
+        "var templates = Handlebars.templates = Handlebars.templates || {};\ntemplates['" +
+        key +
+        "'] = Handlebars.template(" +
+        content +
+        ");"
+      );
     };
 
     return VanillaBuilder;
-
   })(TemplateBuilder);
-
 };

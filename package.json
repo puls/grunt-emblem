@@ -42,7 +42,7 @@
   "dependencies": {
     "grunt": "~0.4.0",
     "grunt-lib-contrib": "~0.5.1",
-    "jsdom": "~3"
+    "jsdom": "~10"
   },
   "keywords": [
     "gruntplugin",
